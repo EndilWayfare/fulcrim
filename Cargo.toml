@@ -1,0 +1,7 @@
+[package]
+name = "fulcrim"
+version = "0.1.0"
+authors = ["Philip Ormand <pro@ruda.com>"]
+edition = "2018"
+
+[dependencies]
