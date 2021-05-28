@@ -4,8 +4,21 @@ version = "0.1.0"
 authors = ["Philip Ormand <pro@ruda.com>"]
 edition = "2018"
 
+[package.metadata.cargo-all-features]
+skip_optional_dependencies = true
+
 [dependencies]
-macro-attr-2018 = "^1.1"
-newtype_derive = "~0.1.6"
-serde = { version = "^1.0", features = ["derive"]}
-ulid = "~0.4.0"
+cfg-if = "^1.0"
+macro-attr-2018 = { version = "^1.1", optional = true }
+newtype_derive = { version = "~0.1.6", optional = true }
+paste = {version = "^1.0", optional = true }
+serde = { version = "^1.0", features = ["derive"], optional = true }
+ulid = { version = "~0.4.0", optional = true }
+
+[features]
+ulid-id = ["macro-attr-2018", "newtype_derive", "paste", "ulid"]
+serde1 = ["serde", "ulid/serde"]
+
+[dev-dependencies]
+impls = "^1.0"
+serde_test = "^1.0"

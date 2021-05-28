@@ -1,13 +1,12 @@
-use std::collections::{HashMap};
+use std::collections::HashMap;
 use std::hash::Hash;
 
-use serde::{de::DeserializeOwned, Serialize};
-
 #[macro_use]
-mod ulid_id;
+#[cfg(feature = "ulid-id")]
+pub mod ulid_id;
 
 pub trait Entity: Clone {
-    type Id: Copy + Eq + Hash + Serialize + DeserializeOwned;
+    type Id: Copy + Eq + Hash;
 
     fn id(&self) -> Self::Id;
 }
