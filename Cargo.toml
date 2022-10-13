@@ -1,0 +1,11 @@
+[package]
+name = "silicate"
+version = "0.1.0"
+edition = "2021"
+description = "Very general Rust utility types"
+authors = ["Philip Ormand <pro@ruda.com>"]
+repository = "http://rigel.ruda.com:8060/Phil/ruda-taxonomy/"
+
+[dependencies]
+macro-attr-2018 = "1.1"
+newtype-derive-2018 = { version = "0.0.7", path = "../newtype-derive-2018" }
