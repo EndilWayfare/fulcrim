@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::hash::Hash;
 
 #[macro_use]
@@ -11,4 +11,5 @@ pub trait Entity: Clone {
     fn id(&self) -> Self::Id;
 }
 
+pub type EntityBTreeMap<T> = BTreeMap<<T as Entity>::Id, T>;
 pub type EntityHashMap<T> = HashMap<<T as Entity>::Id, T>;
