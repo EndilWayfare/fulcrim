@@ -1,5 +1,5 @@
 pub extern crate macro_attr_2018;
-pub extern crate newtype_derive;
+pub extern crate newtype_derive_2018;
 pub extern crate paste;
 pub extern crate ulid;
 
@@ -66,7 +66,7 @@ macro_rules! ulid_id {
                 use std::fmt::{self, Display};
                 use std::str::FromStr;
 
-                use $crate::ulid_id::newtype_derive::{newtype_fmt, NewtypeDisplay, NewtypeFrom};
+                use $crate::ulid_id::newtype_derive_2018::{NewtypeDisplay, NewtypeFrom};
                 use $crate::ulid_id::ulid::{self, Ulid};
                 $crate::_ulid_id_conditional!(@use);
 

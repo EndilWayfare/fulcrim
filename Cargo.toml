@@ -1,6 +1,6 @@
 [package]
 name = "fulcrim"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Philip Ormand <pro@ruda.com>"]
 edition = "2018"
 
@@ -8,17 +8,17 @@ edition = "2018"
 skip_optional_dependencies = true
 
 [dependencies]
-cfg-if = "^1.0"
-macro-attr-2018 = { version = "^1.1", optional = true }
-newtype_derive = { version = "~0.1.6", optional = true }
-paste = {version = "^1.0", optional = true }
-serde = { version = "^1.0", features = ["derive"], optional = true }
-ulid = { version = "~0.4.0", optional = true }
+cfg-if = "1.0"
+macro-attr-2018 = { version = "3.0", optional = true }
+newtype-derive-2018 = { version = "0.2.1", optional = true }
+paste = {version = "1.0", optional = true }
+serde = { version = "1.0", features = ["derive"], optional = true }
+ulid = { version = "1.0", optional = true }
 
 [features]
-ulid-id = ["macro-attr-2018", "newtype_derive", "paste", "ulid"]
+ulid-id = ["macro-attr-2018", "newtype-derive-2018", "paste", "ulid"]
 serde1 = ["serde", "ulid/serde"]
 
 [dev-dependencies]
-impls = "^1.0"
-serde_test = "^1.0"
+impls = "1.0"
+serde_test = "1.0"
