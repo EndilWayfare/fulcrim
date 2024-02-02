@@ -7,5 +7,7 @@ authors = ["Philip Ormand <pro@ruda.com>"]
 repository = "http://rigel.ruda.com:8060/Phil/ruda-taxonomy/"
 
 [dependencies]
-macro-attr-2018 = "1.1"
-newtype-derive-2018 = { version = "0.0.7", path = "../newtype-derive-2018" }
+itertools = "0.12.0"
+macro-attr-2018 = "3.0"
+newtype-derive-2018 = "0.2.1"
+thiserror = "1.0"
