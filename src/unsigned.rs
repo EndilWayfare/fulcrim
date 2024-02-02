@@ -17,26 +17,42 @@ macro_attr! {
     pub struct BijectiveK26(pub u32 /* TODO: Make generic over unsigned sizes */);
 }
 
-const NUMERIC_VALUE_0: u32 = 'A' as u32 - 1;
+fn bijective_len(k: u32, n: u64) -> u32 {
+    let k = k as f64;
+    let n = n as f64;
+    let power = (n + 1.) * (k - 1.);
+
+    power.log(k).floor() as u32
+}
+
+fn geometric_sum(k: u32, n: i32) -> i32 {
+    let k = k as f64;
+    let dividend = k.powi(n + 1) - k;
+    let divisor = k - 1.;
+
+    (dividend / divisor).floor() as i32
+}
+
+const UPPERCASE_ASCII_OFFSET: u8 = b'A' - 1;
 
 impl Display for BijectiveK26 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // TODO: Subtly broken! Faithful port of broken Python original...
-        let value = self.0;
-        let largest_exponent = f64::from(value).log(26_f64).floor().max(0.0) as i32;
-        let largest_power = 26_f64.powi(largest_exponent);
-        let powers = itertools::iterate(largest_power, |x| (x / 26_f64).floor());
-        let mut value = value + 1;
+        let n = self.0 as u64 + 1;
 
-        for c in powers.zip(0..=largest_exponent).map(move |(power, _)| {
-            // TODO: How to check overflow?
-            let power = power as u32;
-            let digit = value / power;
-            // TODO: Probably a cuter functional way to do this...
-            value -= digit * power;
-            (digit + NUMERIC_VALUE_0) as u8 as char
-        }) {
-            f.write_char(c)?
+        let len = bijective_len(26, n);
+        let largest_exponent = len as i32 - 1;
+        let mut power = 26_f64.powi(largest_exponent);
+        let mut min_remainder = 1. + geometric_sum(26, largest_exponent - 1) as f64;
+        let mut remainder = n as f64;
+
+        for _ in 0..len {
+            let digit = (remainder - min_remainder) / power;
+            remainder -= digit.floor() * power;
+            power /= 26.;
+            min_remainder -= power;
+
+            let code = UPPERCASE_ASCII_OFFSET + digit as u8;
+            f.write_char(code as char)?
         }
 
         Ok(())
@@ -44,23 +60,26 @@ impl Display for BijectiveK26 {
 }
 
 impl FromStr for BijectiveK26 {
-    type Err = AlphabeticToBase10Error;
+    type Err = ParseBijectiveK26Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.is_empty() {
-            Err(AlphabeticToBase10Error::EmptyString)
-        } else {
+            Err(ParseBijectiveK26Error::EmptyString)
+        }
+        // TODO: We can statically determine the bijective form of `u32::MAX` and reject strings
+        //       that are shortlex larger.
+        else {
             let factors = itertools::iterate(1, |i| i * 26);
             s.chars()
                 .rev()
                 .zip(factors)
                 .map(|(c, factor)| {
                     if c.is_ascii_alphabetic() {
-                        let numeric_value = c.to_ascii_uppercase() as u32 - NUMERIC_VALUE_0;
+                        let numeric_value = c.to_ascii_uppercase() as u8 - UPPERCASE_ASCII_OFFSET;
 
-                        Ok(numeric_value * factor)
+                        Ok(factor * numeric_value as u32)
                     } else {
-                        Err(AlphabeticToBase10Error::NonAsciiCharacter(c))
+                        Err(ParseBijectiveK26Error::NonAsciiCharacter(c))
                     }
                 })
                 .fold_ok(0, ops::Add::add)
@@ -72,7 +91,7 @@ impl FromStr for BijectiveK26 {
 
 #[derive(Debug, PartialEq)]
 #[derive(Error)]
-pub enum AlphabeticToBase10Error {
+pub enum ParseBijectiveK26Error {
     #[error("{:?} is not an ascii letter", 0)]
     NonAsciiCharacter(char),
     #[error("String was empty")]
@@ -93,7 +112,7 @@ impl Ordinal {
 
 impl Display for Ordinal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        (self.0 as usize + 1).fmt(f)
+        (self.0 as u64 + 1).fmt(f)
     }
 }
 
