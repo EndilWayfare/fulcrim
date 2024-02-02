@@ -8,22 +8,22 @@ use newtype_derive_2018::NewtypeFrom;
 macro_attr! {
     #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
     #[derive(NewtypeFrom!)]
-    pub struct CountFromOne(pub u32 /* TODO: Make generic over unsigned sizes */);
+    pub struct Ordinal(pub u32 /* TODO: Make generic over unsigned sizes */);
 }
 
-impl CountFromOne {
+impl Ordinal {
     pub fn from_domain(x: NonZeroU32) -> Self {
         Self(u32::from(x) - 1)
     }
 }
 
-impl Display for CountFromOne {
+impl Display for Ordinal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0 + 1)
     }
 }
 
-impl FromStr for CountFromOne {
+impl FromStr for Ordinal {
     type Err = ParseIntError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
