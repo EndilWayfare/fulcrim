@@ -6,7 +6,7 @@ use macro_attr_2018::macro_attr;
 use newtype_derive_2018::NewtypeFrom;
 
 macro_attr! {
-    #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
     #[derive(NewtypeFrom!)]
     pub struct Ordinal(pub u32 /* TODO: Make generic over unsigned sizes */);
 }
@@ -19,7 +19,7 @@ impl Ordinal {
 
 impl Display for Ordinal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0 + 1)
+        (self.0 as usize + 1).fmt(f)
     }
 }
 
