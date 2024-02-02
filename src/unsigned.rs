@@ -120,7 +120,11 @@ impl FromStr for Ordinal {
     type Err = ParseIntError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        NonZeroU32::from_str(s).map(Self::from_domain)
+        u64::from_str(s).and_then(|n| {
+            u32::try_from(n)
+                .map(Self)
+                .or_else(|_| NonZeroU32::from_str(s).map(Self::from_domain))
+        })
     }
 }
 
