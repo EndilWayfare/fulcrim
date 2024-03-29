@@ -23,6 +23,7 @@ ulid-id = [
     "dep:newtype-derive-2018",
     "dep:paste",
     "dep:ulid",
+    "dep:web-time",
 ]
 serde = ["dep:serde", "ulid/serde"]
 

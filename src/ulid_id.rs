@@ -3,6 +3,48 @@ pub extern crate newtype_derive_2018;
 pub extern crate paste;
 pub extern crate ulid;
 
+/// Creates a new Ulid even on "wasm32-unknown-unknown" target
+///
+/// As of the time of writing (2023-12-14), bare wasm standard still doesn't implement `sys::time`.
+///
+/// Workaround is to use `web-time` crate, which provides a replacement for `sys::time` that is
+/// drop-in API compatible. Unfortunately, it is not DROP-IN drop-in compatible because it does not
+/// impl `Into<std::time::SystemTime>` and so cannot be passed to functions from *foreign crates*.
+///
+/// But, on unsupported platforms, `std::time::SystemTime` still has `checked_add_duration` method,
+/// so the conversion IS possible.
+///
+/// TODO: Find out why `web_time` doesn't already fucking support this.
+///       It would be easy. `Into<std::time::SystemTime>::into` would automatically conditionally
+///       compile to explicit `<web_time::web::SystemTime as Into<std::time::SystemTime>>::into` on
+///       "wasm32-unknown-unknown" and to the blanket impl of `std::time::SystemTime` into itself
+///       on all other platforms.
+pub fn now() -> std::time::SystemTime {
+    _now_impl()
+}
+
+// NOTE: Exact `cfg` guard taken directly from `web-time`
+cfg_if::cfg_if! {
+    if #[cfg(all(
+        target_family = "wasm",
+        not(any(target_os = "emscripten", target_os = "wasi"))
+    ))] {
+        fn _now_impl() -> std::time::SystemTime {
+            let duration = web_time::SystemTime::UNIX_EPOCH
+                .elapsed()
+                .expect(
+                    "The system thinks it is currently at or before Unix epoch, so you have bigger problems"
+                );
+            std::time::UNIX_EPOCH.checked_add(duration).unwrap()
+        }
+    }
+    else {
+        fn _now_impl() -> std::time::SystemTime {
+            std::time::SystemTime::now()
+        }
+    }
+}
+
 cfg_if::cfg_if! {
     if #[cfg(feature = "serde")] {
         pub extern crate serde;
@@ -80,7 +122,7 @@ macro_rules! ulid_id {
                 #[allow(clippy::new_without_default)]
                 impl $type {
                     pub fn new() -> Self {
-                        $type(ulid::Ulid::new())
+                        $type(ulid::Ulid::from_datetime($crate::ulid_id::now()))
                     }
                 }
 
