@@ -1,3 +1,3 @@
 # fulcrim
 
-Minimally intrusive types and traits for working with "entity" objects
+Foundational, minimally intrusive types and traits for domain modeling

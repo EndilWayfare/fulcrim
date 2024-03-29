@@ -5,6 +5,9 @@ use std::hash::Hash;
 #[cfg(feature = "ulid-id")]
 pub mod ulid_id;
 
+#[cfg(feature = "unsigned")]
+pub mod unsigned;
+
 pub trait Entity: Clone {
     type Id: Copy + Eq + Hash;
 

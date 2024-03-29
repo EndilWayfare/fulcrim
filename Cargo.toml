@@ -3,6 +3,8 @@ name = "fulcrim"
 version = "0.2.0"
 authors = ["Philip Ormand <pro@ruda.com>"]
 edition = "2021"
+repository = "http://rigel.ruda.com:8060/Phil/ruda-taxonomy/"
+description = "Foundational, minimally intrusive types and traits for domain modeling"
 
 [package.metadata.cargo-all-features]
 skip_optional_dependencies = true
@@ -10,14 +12,31 @@ skip_optional_dependencies = true
 [dependencies]
 cfg-if = "1.0"
 
+# TODO: When does it make sense to have optional dependencies?
+#       It strikes me that I may be going overboard here, perhaps for no proportional benefit.
+#       Two main current motivations:
+#           1) Minimize compile times by not pulling in unused crates
+#               `serde` is almost ALWAYS behind a feature gate in library crates that support it
+#               for serializing the data types they expose. It doesn't have a lot of direct or 
+#               transitive dependencies, but it has a fuckload of macros. Is THAT actually why 
+#               people don't like including it unneccessarily?
+#           2) Minimize version conflict / double-includes for unused crates
+#               If you're pulling in `fulcrim` just to use one of my top-level, non-gated traits,
+#               I feel like it would suck if that alone caused a bunch of irrelevant duplication
+#               bloat, especially if caused by another dependency you have no control over.
+#               Is this reasonable? Is this why people hate large dependency graphs? Would this
+#               actually be moving the needle for "dependency minimalism enthusiasts" at all?
+itertools = { optional = true, version = "0.12.0" }
 macro-attr-2018 = { optional = true, version = "3.0" }
 newtype-derive-2018 = { optional = true, version = "0.2.1" }
 paste = { optional = true, version = "1.0" }
 serde = { optional = true, version = "1.0", features = ["derive"] }
+thiserror = { optional = true, version = "1.0" }
 ulid = { optional = true, version = "1.0" }
 web-time = { optional = true, version = "0.2.3" }
 
 [features]
+serde = ["dep:serde", "ulid/serde"]
 ulid-id = [
     "dep:macro-attr-2018",
     "dep:newtype-derive-2018",
@@ -25,7 +44,12 @@ ulid-id = [
     "dep:ulid",
     "dep:web-time",
 ]
-serde = ["dep:serde", "ulid/serde"]
+unsigned = [
+    "dep:itertools",
+    "dep:macro-attr-2018",
+    "dep:newtype-derive-2018",
+    "dep:thiserror",
+]
 
 [dev-dependencies]
 impls = "1.0"
