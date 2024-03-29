@@ -4,7 +4,7 @@ pub extern crate paste;
 pub extern crate ulid;
 
 cfg_if::cfg_if! {
-    if #[cfg(feature = "serde1")] {
+    if #[cfg(feature = "serde")] {
         pub extern crate serde;
         use serde::{Deserialize, Serialize};
 

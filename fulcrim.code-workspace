@@ -5,6 +5,6 @@
     }
   ],
   "settings": {
-    "rust-analyzer.cargo.allFeatures": true
+    "rust-analyzer.cargo.features": ["ulid-id", "serde"]
   }
 }

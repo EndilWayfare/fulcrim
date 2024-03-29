@@ -2,22 +2,29 @@
 name = "fulcrim"
 version = "0.2.0"
 authors = ["Philip Ormand <pro@ruda.com>"]
-edition = "2018"
+edition = "2021"
 
 [package.metadata.cargo-all-features]
 skip_optional_dependencies = true
 
 [dependencies]
 cfg-if = "1.0"
-macro-attr-2018 = { version = "3.0", optional = true }
-newtype-derive-2018 = { version = "0.2.1", optional = true }
-paste = {version = "1.0", optional = true }
-serde = { version = "1.0", features = ["derive"], optional = true }
-ulid = { version = "1.0", optional = true }
+
+macro-attr-2018 = { optional = true, version = "3.0" }
+newtype-derive-2018 = { optional = true, version = "0.2.1" }
+paste = { optional = true, version = "1.0" }
+serde = { optional = true, version = "1.0", features = ["derive"] }
+ulid = { optional = true, version = "1.0" }
+web-time = { optional = true, version = "0.2.3" }
 
 [features]
-ulid-id = ["macro-attr-2018", "newtype-derive-2018", "paste", "ulid"]
-serde1 = ["serde", "ulid/serde"]
+ulid-id = [
+    "dep:macro-attr-2018",
+    "dep:newtype-derive-2018",
+    "dep:paste",
+    "dep:ulid",
+]
+serde = ["dep:serde", "ulid/serde"]
 
 [dev-dependencies]
 impls = "1.0"
