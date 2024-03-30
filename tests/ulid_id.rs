@@ -75,7 +75,7 @@ mod id {
         assert_eq!(Err(expected), actual)
     }
 
-    #[cfg(feature = "serde1")]
+    #[cfg(feature = "serde")]
     #[test]
     fn serde() {
         let id = FooId::new();
@@ -86,7 +86,7 @@ mod id {
             &id,
             &[
                 Token::NewtypeStruct { name: "FooId" },
-                Token::String(&ulid_str),
+                Token::String(ulid_str),
             ],
         )
     }
@@ -122,7 +122,7 @@ mod parse_error {
         }
     }
 
-    #[cfg(feature = "serde1")]
+    #[cfg(feature = "serde")]
     #[test]
     fn serde() {
         let error = ParseFooIdError::from(ulid::DecodeError::InvalidChar);
@@ -131,8 +131,13 @@ mod parse_error {
         serde_test::assert_tokens(
             &error,
             &[
-                Token::NewtypeStruct { name: "ParseFooIdError" },
-                Token::UnitVariant{name: "UlidDecodeErrorDef", variant: "InvalidChar"},
+                Token::NewtypeStruct {
+                    name: "ParseFooIdError",
+                },
+                Token::UnitVariant {
+                    name: "UlidDecodeErrorDef",
+                    variant: "InvalidChar",
+                },
             ],
         )
     }
