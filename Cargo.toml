@@ -53,4 +53,4 @@ unsigned = [
 
 [dev-dependencies]
 impls = "1.0"
-serde_test = "1.0"
+serde_test = "1.0.127"
