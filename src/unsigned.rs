@@ -70,20 +70,28 @@ impl FromStr for BijectiveK26 {
         // TODO: We can statically determine the bijective form of `u32::MAX` and reject strings
         //       that are shortlex larger.
         else {
-            let factors = itertools::iterate(1, |i| i * 26);
+            let factors = itertools::iterate(1u32, |i| i * 26);
             s.chars()
                 .rev()
                 .zip(factors)
                 .map(|(c, factor)| {
                     if c.is_ascii_alphabetic() {
                         let numeric_value = c.to_ascii_uppercase() as u8 - UPPERCASE_ASCII_OFFSET;
+                        let term = factor
+                            .checked_mul(numeric_value as u32)
+                            .ok_or(ParseBijectiveK26Error::Overflow)?;
 
-                        Ok(factor * numeric_value as u32)
+                        Ok(term)
                     } else {
                         Err(ParseBijectiveK26Error::NonAsciiCharacter(c))
                     }
                 })
-                .fold_ok(0, ops::Add::add)
+                .try_fold(0u32, |acc, item| {
+                    item.and_then(|addend| {
+                        acc.checked_add(addend)
+                            .ok_or(ParseBijectiveK26Error::Overflow)
+                    })
+                })
                 .map(|result| result - 1)
                 .map(Self)
         }
@@ -97,6 +105,8 @@ pub enum ParseBijectiveK26Error {
     NonAsciiCharacter(char),
     #[error("String was empty")]
     EmptyString,
+    #[error("Value was too large")]
+    Overflow,
 }
 
 macro_attr! {
