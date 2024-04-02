@@ -9,12 +9,16 @@ use macro_attr_2018::macro_attr;
 use newtype_derive_2018::NewtypeFrom;
 use thiserror::Error;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 // TODO: Put `BijectiveK26` everywhere you inisted you were eventually going to
 
 // NOTE: https://en.wikipedia.org/wiki/Bijective_numeration#The_bijective_base-26_system
 macro_attr! {
     #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
     #[derive(NewtypeFrom!)]
+    #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
     pub struct BijectiveK26(pub u32 /* TODO: Make generic over unsigned sizes */);
 }
 
@@ -112,6 +116,7 @@ pub enum ParseBijectiveK26Error {
 macro_attr! {
     #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
     #[derive(NewtypeFrom!)]
+    #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
     pub struct Ordinal(pub u32 /* TODO: Make generic over unsigned sizes */);
 }
 
