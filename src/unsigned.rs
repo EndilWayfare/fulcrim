@@ -1,16 +1,18 @@
 use core::fmt::{self, Display, Write};
-use core::num::{NonZeroU32, ParseIntError};
-use core::ops;
+use core::num::{NonZeroU32, NonZeroU64};
 use core::str::FromStr;
-use std::num::NonZeroU64;
 
-use itertools::Itertools;
 use macro_attr_2018::macro_attr;
 use newtype_derive_2018::NewtypeFrom;
+use nom::error::{FromExternalError, ParseError};
 use thiserror::Error;
+
+use crate::parsing::{AsChar, IResult, Parser, ParserExt};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+
+use crate::parsing::{CharInput, CharParse, DoubleEndedInputIter, FromExternalFromStrErr};
 
 // TODO: Put `BijectiveK26` everywhere you inisted you were eventually going to
 
@@ -20,6 +22,78 @@ macro_attr! {
     #[derive(NewtypeFrom!)]
     #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
     pub struct BijectiveK26(pub u32 /* TODO: Make generic over unsigned sizes */);
+}
+
+impl BijectiveK26 {
+    pub fn try_from_iter<T>(iter: T) -> Result<Self, ParseBijectiveK26Error>
+    where
+        T: Iterator<Item = char> + DoubleEndedIterator,
+    {
+        type Error = ParseBijectiveK26Error;
+
+        let factors = itertools::iterate(1u32, |i| i * 26);
+        iter.into_iter()
+            .rev()
+            .zip(factors)
+            .map(|(c, factor)| {
+                if c.is_ascii_alphabetic() {
+                    let numeric_value = c.to_ascii_uppercase() as u8 - UPPERCASE_ASCII_OFFSET;
+                    let term = factor
+                        .checked_mul(numeric_value as u32)
+                        .ok_or(Error::Overflow)?;
+
+                    Ok(term)
+                } else {
+                    Err(Error::NonAsciiCharacter(c))
+                }
+            })
+            .try_fold(0u32, |acc, item| {
+                item.and_then(|addend| acc.checked_add(addend).ok_or(Error::Overflow))
+            })
+            .and_then(|result| {
+                if result != 0 {
+                    Ok(result - 1)
+                } else {
+                    Err(Error::EmptyString)
+                }
+            })
+            .map(Self)
+    }
+}
+
+impl FromStr for BijectiveK26 {
+    type Err = ParseBijectiveK26Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // TODO: We can statically determine the bijective form of `u32::MAX` and reject strings
+        //       that are shortlex larger.
+        Self::try_from_iter(s.chars())
+    }
+}
+
+#[derive(Debug, PartialEq)]
+#[derive(Error)]
+pub enum ParseBijectiveK26Error {
+    #[error("{:?} is not an ascii letter", 0)]
+    NonAsciiCharacter(char),
+    #[error("String was empty")]
+    EmptyString,
+    #[error("Value was too large")]
+    Overflow,
+}
+
+impl<I, E> CharParse<I, E> for BijectiveK26
+where
+    I: CharInput,
+    I: DoubleEndedInputIter,
+    E: FromExternalFromStrErr<I, BijectiveK26>,
+{
+    fn parse(input: I) -> IResult<I, Self, E> {
+        nom::character::complete::alpha1
+            .map(|alphas: I| alphas.iter_elements().map(AsChar::as_char))
+            .map_res(BijectiveK26::try_from_iter)
+            .parse(input)
+    }
 }
 
 fn bijective_len(k: u32, n: u64) -> u32 {
@@ -64,58 +138,10 @@ impl Display for BijectiveK26 {
     }
 }
 
-impl FromStr for BijectiveK26 {
-    type Err = ParseBijectiveK26Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.is_empty() {
-            Err(ParseBijectiveK26Error::EmptyString)
-        }
-        // TODO: We can statically determine the bijective form of `u32::MAX` and reject strings
-        //       that are shortlex larger.
-        else {
-            let factors = itertools::iterate(1u32, |i| i * 26);
-            s.chars()
-                .rev()
-                .zip(factors)
-                .map(|(c, factor)| {
-                    if c.is_ascii_alphabetic() {
-                        let numeric_value = c.to_ascii_uppercase() as u8 - UPPERCASE_ASCII_OFFSET;
-                        let term = factor
-                            .checked_mul(numeric_value as u32)
-                            .ok_or(ParseBijectiveK26Error::Overflow)?;
-
-                        Ok(term)
-                    } else {
-                        Err(ParseBijectiveK26Error::NonAsciiCharacter(c))
-                    }
-                })
-                .try_fold(0u32, |acc, item| {
-                    item.and_then(|addend| {
-                        acc.checked_add(addend)
-                            .ok_or(ParseBijectiveK26Error::Overflow)
-                    })
-                })
-                .map(|result| result - 1)
-                .map(Self)
-        }
-    }
-}
-
-#[derive(Debug, PartialEq)]
-#[derive(Error)]
-pub enum ParseBijectiveK26Error {
-    #[error("{:?} is not an ascii letter", 0)]
-    NonAsciiCharacter(char),
-    #[error("String was empty")]
-    EmptyString,
-    #[error("Value was too large")]
-    Overflow,
-}
-
 macro_attr! {
     #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
     #[derive(NewtypeFrom!)]
+    #[derive(CharParseFromStr!)]
     #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
     pub struct Ordinal(pub u32 /* TODO: Make generic over unsigned sizes */);
 }
@@ -126,20 +152,32 @@ impl Ordinal {
     }
 }
 
-impl Display for Ordinal {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        (self.0 as u64 + 1).fmt(f)
+impl<I, E> CharParse<I, E> for Ordinal
+where
+    I: CharInput,
+    E: ParseError<I>,
+    E: FromExternalFromStrErr<I, Self>,
+{
+    fn parse(input: I) -> IResult<I, Self, E> {
+        nom::character::complete::digit1
+            .and_then(nom::character::complete::u64)
+            .map_res(|n| {
+                NonZeroU64::try_from(n)
+                    .and_then(NonZeroU32::try_from)
+                    .map_err(|_| ParseOrdinalError::Invalid)
+            })
+            .map(Self::from_domain)
+            .parse(input)
     }
 }
 
-impl FromStr for Ordinal {
-    type Err = ParseIntError;
+naive_parse_error!(Ordinal, "Failed to parse Ordinal");
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        NonZeroU64::from_str(s)?
-            .try_into()
-            .or_else(|_| NonZeroU32::from_str(s))
-            .map(Self::from_domain)
+// impl FromExternalError<I, E
+
+impl Display for Ordinal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        (self.0 as u64 + 1).fmt(f)
     }
 }
 

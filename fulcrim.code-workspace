@@ -6,6 +6,7 @@
   ],
   "settings": {
     "rust-analyzer.cargo.features": [
+      "parsing",
       "serde",
       "ulid-id",
       "unsigned"

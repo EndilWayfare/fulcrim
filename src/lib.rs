@@ -2,6 +2,10 @@ use std::collections::{BTreeMap, HashMap};
 use std::hash::Hash;
 
 #[macro_use]
+#[cfg(feature = "parsing")]
+pub mod parsing;
+
+#[macro_use]
 #[cfg(feature = "ulid-id")]
 pub mod ulid_id;
 
