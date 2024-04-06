@@ -1,12 +1,12 @@
 use core::ops;
 use core::str::FromStr;
 
-use nom::{InputIter, InputLength, InputTake, InputTakeAtPosition, Finish};
+use nom::{InputIter, InputLength, InputTake, InputTakeAtPosition};
 
 // TODO: Export a prelude?
 pub use nom;
 pub use nom::error::{FromExternalError, ParseError};
-pub use nom::{AsChar, IResult, Parser};
+pub use nom::{AsChar, IResult, Parser, Finish};
 pub use nom_supreme::ParserExt;
 
 // TODO: It's unfortunate that `nom_derive` forces `InputIter<Item = u8>`, because it would be
