@@ -31,6 +31,8 @@ macro-attr-2018 = { optional = true, version = "3.0" }
 newtype-derive-2018 = { optional = true, version = "0.2.1" }
 nom = { optional = true, version = "7.0" }
 nom-supreme = { optional = true, version = "0.8.0" }
+num-integer = { optional = true, version = "0.1.36" }
+num-traits = { optional = true, version = "0.2.0" }
 paste = { optional = true, version = "1.0" }
 serde = { optional = true, version = "1.0", features = ["derive"] }
 thiserror = { optional = true, version = "1.0" }
@@ -51,6 +53,8 @@ unsigned = [
     "dep:itertools",
     "dep:macro-attr-2018",
     "dep:newtype-derive-2018",
+    "dep:num-integer",
+    "dep:num-traits",
     "dep:thiserror",
 
     "parsing",

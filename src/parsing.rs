@@ -36,18 +36,46 @@ where
 
 #[macro_export]
 macro_rules! CharParseFromStr {
-    (@args () $vis:vis $name:ident $($token:tt)+) => {
+    (@args ($(where $($bound:tt)*)?) $vis:vis $name:ident $($token:tt)+) => {
         paste::paste! {
-            CharParseFromStr! {@impl [<Parse $name Error>], $vis $name $($token)+}
+            CharParseFromStr! {@impl [$name] [[<Parse $name Error>]] [$($($bound)*)?] $($token)+}
         }
     };
-    (@args (Err = $err:ty) $vis:vis $name:ident $($token:tt)+) => {
+    (@args (err($err:ty) $(where $($bound:tt)*)?) $vis:vis $name:ident $($token:tt)+) => {
         paste::paste! {
-            CharParseFromStr! {@impl err, $vis $name $($token)+}
+            CharParseFromStr! {@impl [$name] [$err] [$($($bound)*)?] $($token)+}
         }
     };
-    (@impl $err:ty, $vis:vis $name:ident $($token:tt)+) => {
-        impl FromStr for $name {
+    (@impl [$name:ident] [$err:ident] [$($bound:tt)*] $($token:tt)+) => {
+        ::newtype_derive_2018::generics_parse! {
+            CharParseFromStr {
+                @impl generics_parse_done
+                [$name] [$err] [$($bound)*]
+            }
+            $($token)+
+        }
+    };
+    (
+        @impl generics_parse_done
+        [$name:ident] [$err:ty] [$($bound:tt)*]
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
+        ($(pub)? $t0:ty $(, $(pub)? $phantom:ty)* $(,)?);
+    ) => {
+        ::newtype_derive_2018::generics_concat! {
+            CharParseFromStr {
+                @impl generics_concat_done
+                [$name] [$err]
+            }
+            [$($g)*] [$($r)*] [$($w)*],
+            [] [] [where Self: for<'a> CharParse<&'a str, $err>]
+        }
+    };
+    (
+        @impl generics_concat_done
+        [$name:ident] [$err:ty]
+        [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
+    ) => {
+        impl $($g)* FromStr for $name $($r)* $($w)* {
             type Err = $err;
 
             fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -55,8 +83,9 @@ macro_rules! CharParseFromStr {
             }
         }
     };
+
     (($($err:tt)*) $vis:vis $type_kind:ident $name:ident $($body:tt)+) => {
-        CharParseFromStr! {@args ($($err)*) $vis $name $($body:tt)+}
+        CharParseFromStr! {@args ($($err)*) $vis $name $($body)+}
     };
 }
 
