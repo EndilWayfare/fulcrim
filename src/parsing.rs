@@ -59,7 +59,8 @@ macro_rules! CharParseFromStr {
         @impl generics_parse_done
         [$name:ident] [$err:ty] [$($bound:tt)*]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
-        ($(pub)? $t0:ty $(, $(pub)? $phantom:ty)* $(,)?);
+        // ($(pub)? $t0:ty $(, $(pub)? $phantom:ty)* $(,)?);
+        $($token:tt)*
     ) => {
         ::newtype_derive_2018::generics_concat! {
             CharParseFromStr {
