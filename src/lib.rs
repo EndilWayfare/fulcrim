@@ -2,6 +2,10 @@ use std::collections::{BTreeMap, HashMap};
 use std::hash::Hash;
 
 #[macro_use]
+#[cfg(feature = "diesel")]
+pub mod diesel;
+
+#[macro_use]
 #[cfg(feature = "parsing")]
 pub mod parsing;
 

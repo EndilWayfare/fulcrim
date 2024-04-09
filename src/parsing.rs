@@ -6,7 +6,7 @@ use nom::{InputIter, InputLength, InputTake, InputTakeAtPosition};
 // TODO: Export a prelude?
 pub use nom;
 pub use nom::error::{FromExternalError, ParseError};
-pub use nom::{AsChar, IResult, Parser, Finish};
+pub use nom::{AsChar, Finish, IResult, Parser};
 pub use nom_supreme::ParserExt;
 
 // TODO: It's unfortunate that `nom_derive` forces `InputIter<Item = u8>`, because it would be
@@ -90,6 +90,8 @@ macro_rules! CharParseFromStr {
     };
 }
 
+pub use CharParseFromStr;
+
 #[macro_export]
 macro_rules! naive_parse_error {
     (@impl $name:ty, $msg:literal) => {
@@ -113,12 +115,12 @@ macro_rules! naive_parse_error {
                 fn from_error_kind(_input: I, _kind: nom::error::ErrorKind) -> Self {
                     Self::Invalid
                 }
-    
+
                 fn append(_input: I, _kind: nom::error::ErrorKind, other: Self) -> Self {
                     other
                 }
             }
-    
+
             impl<I, E> FromExternalError<I, E> for [<Parse $name Error>] {
                 fn from_external_error(_input: I, _kind: nom::error::ErrorKind, _e: E) -> Self {
                     Self::Invalid
@@ -129,6 +131,8 @@ macro_rules! naive_parse_error {
     ($name:ty, $msg:literal) => { naive_parse_error!(@impl $name, $msg); };
     ($name:ty) => { naive_parse_error! (@impl $name []); };
 }
+
+pub use naive_parse_error;
 
 // TODO: This is silly. I want trait aliases. I want associated bounds. reeeee.
 

@@ -26,6 +26,7 @@ cfg-if = "1.0"
 #               bloat, especially if caused by another dependency you have no control over.
 #               Is this reasonable? Is this why people hate large dependency graphs? Would this
 #               actually be moving the needle for "dependency minimalism enthusiasts" at all?
+diesel = { optional = true, version = "2.1", features = ["postgres"] }
 itertools = { optional = true, version = "0.12.0" }
 macro-attr-2018 = { optional = true, version = "3.0" }
 newtype-derive-2018 = { optional = true, version = "0.2.1" }
@@ -40,8 +41,9 @@ ulid = { optional = true, version = "1.0" }
 web-time = { optional = true, version = "0.2.3" }
 
 [features]
+diesel = ["dep:diesel"]
 parsing = ["dep:nom", "dep:nom-supreme", "dep:paste"]
-serde = ["dep:serde", "ulid/serde"]
+serde = ["dep:serde", "ulid?/serde"]
 ulid-id = [
     "dep:macro-attr-2018",
     "dep:newtype-derive-2018",

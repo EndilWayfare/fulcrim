@@ -6,6 +6,7 @@
   ],
   "settings": {
     "rust-analyzer.cargo.features": [
+      "diesel",
       "parsing",
       "serde",
       "ulid-id",
