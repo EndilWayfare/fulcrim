@@ -92,3 +92,57 @@ macro_rules! impl_as_expression_queryable {
 
 pub use impl_as_expression_queryable;
 
+// TODO: This is new stuff
+
+/// To make this actually infallible even under external database modification, you should define
+/// your SQL columns in terms of a DOMAIN type, like
+/// ```sql
+/// -- Infallible conversion from/to unsigned 16-bit integer
+/// CREATE DOMAIN u16_as_i32 AS INTEGER CHECK (VALUE >= 0 AND VALUE <= 65535);
+/// ```
+#[macro_export]
+macro_rules! impl_diesel_for_u16_in_terms_of_i32 {
+    // TODO: Support... generics?
+    ($ty: ty) => {
+        ::paste::paste! {
+            #[allow(non_snake_case)]
+            mod [<impl_diesel_for_ $ty>] {
+                use super::$ty;
+
+                use diesel::backend::Backend;
+                use diesel::deserialize::{self, FromSql};
+                use diesel::serialize::{self, ToSql};
+                use diesel::sql_types::Int4;
+                use diesel::query_builder::bind_collector::RawBytesBindCollector;
+
+                impl<DB> FromSql<Int4, DB> for $ty
+                where
+                    DB: Backend,
+                    i32: FromSql<Int4, DB>,
+                {
+                    fn from_sql(bytes: DB::RawValue<'_>) -> deserialize::Result<Self> {
+                        // TODO: Support alternate wrapping strategies
+                        i32::from_sql(bytes).map(|n| n as u16).map($ty::new)
+                    }
+                }
+
+                impl<DB> ToSql<Int4, DB> for $ty
+                where
+                    DB: for<'a> Backend<BindCollector<'a> = RawBytesBindCollector<DB>>,
+                    i32: ToSql<Int4, DB>,
+                {
+                    fn to_sql<'b>(&'b self, out: &mut serialize::Output<'b, '_, DB>) -> serialize::Result {
+                        // TODO: Support alternate unwrapping strategies
+                        i32::from(self.0).to_sql(&mut out.reborrow())
+                    }
+                }
+
+                $crate::delegate_to_sql_nullable!($ty);
+
+                $crate::impl_as_expression_queryable! {Int4 [expresses] $ty}
+            }
+        }
+    };
+}
+
+pub use impl_diesel_for_u16_in_terms_of_i32;

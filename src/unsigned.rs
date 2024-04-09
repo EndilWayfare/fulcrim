@@ -30,6 +30,10 @@ impl<T: Integer + Unsigned> BijectiveK26<T>
 where
     T: From<u8> + CheckedAdd + CheckedMul + Clone,
 {
+    pub fn new(inner: T) -> Self {
+        Self(inner)
+    }
+
     pub fn try_from_iter<I>(iter: I) -> Result<Self, ParseBijectiveK26Error>
     where
         I: Iterator<Item = char> + DoubleEndedIterator,
@@ -152,6 +156,15 @@ where
     }
 }
 
+#[cfg(feature = "diesel")]
+mod _impl_diesel_for_bijective_k26_u16 {
+    use super::*;
+
+    // TODO: Generics in macros are *bloody annoying*
+    type BijectiveK26U16 = BijectiveK26<u16>;
+    crate::diesel::impl_diesel_for_u16_in_terms_of_i32!(BijectiveK26U16);
+}
+
 macro_attr! {
     #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
     #[derive(CharParseFromStr!)]
@@ -160,6 +173,10 @@ macro_attr! {
 }
 
 impl<T: Integer + Unsigned + NonZeroAble> Ordinal<T> {
+    pub fn new(inner: T) -> Self {
+        Self(inner)
+    }
+
     pub fn from_domain(x: T::NonZero) -> Self {
         Self(T::from(x) - T::one())
     }
@@ -200,6 +217,15 @@ where
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         (T::NextGreater::from(self.0.clone()) + T::NextGreater::one()).fmt(f)
     }
+}
+
+#[cfg(feature = "diesel")]
+mod _impl_diesel_for_ordinal_u16 {
+    use super::*;
+
+    // TODO: Generics in macros are *bloody annoying*
+    type OrdinalU16 = Ordinal<u16>;
+    crate::diesel::impl_diesel_for_u16_in_terms_of_i32!(OrdinalU16);
 }
 
 pub trait HasGreaterWidth: Integer {
