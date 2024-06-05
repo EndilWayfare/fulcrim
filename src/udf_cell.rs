@@ -145,6 +145,12 @@ pub struct UdfCell<T> {
     token: UdfToken,
 }
 
+impl<T> UdfCell<T> {
+    pub fn new(value: T) -> Self {
+        UdfToken::new().make_cell(value)
+    }
+}
+
 #[derive(Clone, Debug)]
 struct UdfCellInner<T> {
     epoch: bool,
