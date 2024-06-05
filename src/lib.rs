@@ -16,6 +16,8 @@ pub mod ulid_id;
 #[cfg(feature = "unsigned")]
 pub mod unsigned;
 
+pub mod update;
+
 pub trait Entity: Clone {
     type Id: Copy + Eq + Hash;
 
