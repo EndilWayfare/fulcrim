@@ -9,6 +9,7 @@
       "diesel",
       "parsing",
       "serde",
+      "udf-cell",
       "ulid-id",
       "unsigned"
     ]

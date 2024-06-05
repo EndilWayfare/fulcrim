@@ -9,6 +9,9 @@ pub mod diesel;
 #[cfg(feature = "parsing")]
 pub mod parsing;
 
+#[cfg(feature = "udf-cell")]
+pub mod udf_cell;
+
 #[macro_use]
 #[cfg(feature = "ulid-id")]
 pub mod ulid_id;

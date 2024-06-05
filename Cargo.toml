@@ -44,6 +44,7 @@ web-time = { optional = true, version = "0.2.3" }
 diesel = ["dep:diesel"]
 parsing = ["dep:nom", "dep:nom-supreme", "dep:paste"]
 serde = ["dep:serde", "ulid?/serde"]
+udf-cell = ["dep:thiserror"]
 ulid-id = [
     "dep:macro-attr-2018",
     "dep:newtype-derive-2018",
