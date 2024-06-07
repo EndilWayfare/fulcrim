@@ -99,6 +99,68 @@ cfg_if::cfg_if! {
     }
 }
 
+cfg_if::cfg_if! {
+    if #[cfg(feature = "diesel")] {
+        #[macro_export]
+        macro_rules! impl_diesel_for_ulid_newtype {
+            ($ty: ty) => {
+                paste::paste! {
+                    #[allow(non_snake_case)]
+                    mod [<impl_diesel_for_ $ty>] {
+                        use super::$ty;
+
+                        use diesel::backend::Backend;
+                        use diesel::deserialize::{self, FromSql};
+                        use diesel::serialize::{self, ToSql};
+                        use diesel::sql_types;
+                        use diesel::query_builder::bind_collector::RawBytesBindCollector;
+                        use ulid::Ulid;
+                        use uuid::Uuid;
+
+                        impl<DB> FromSql<sql_types::Uuid, DB> for $ty
+                        where
+                            DB: Backend,
+                            Uuid: FromSql<sql_types::Uuid, DB>,
+                        {
+                            fn from_sql(bytes: DB::RawValue<'_>) -> deserialize::Result<Self> {
+                                Uuid::from_sql(bytes).map(Ulid::from).map($ty::from)
+                            }
+                        }
+
+                        impl<DB> ToSql<sql_types::Uuid, DB> for $ty
+                        where
+                            DB: for<'a> Backend<BindCollector<'a> = RawBytesBindCollector<DB>>,
+                            Uuid: ToSql<sql_types::Uuid, DB>,
+                        {
+                            fn to_sql<'b>(&'b self, out: &mut serialize::Output<'b, '_, DB>) -> serialize::Result {
+                                Uuid::from(Ulid::from(*self)).to_sql(&mut out.reborrow())
+                            }
+                        }
+
+                        ::fulcrim::diesel::delegate_to_sql_nullable!($ty);
+
+                        ::fulcrim::diesel::impl_as_expression_queryable! {sql_types::Uuid [expresses] $ty}
+                    }
+                }
+            };
+        }
+
+        pub use impl_diesel_for_ulid_newtype;
+
+        #[macro_export]
+        macro_rules! _ulid_id_diesel {
+            ($ty: ty) => {
+                $crate::ulid_id::impl_diesel_for_ulid_newtype!($ty);
+            };
+        }
+    } else {
+        #[macro_export]
+        macro_rules! _ulid_id_diesel {
+            ($ty: ty) => {};
+        }
+    }
+}
+
 #[macro_export]
 macro_rules! ulid_id {
     ($type: ident) => {
@@ -113,6 +175,7 @@ macro_rules! ulid_id {
                 $crate::_ulid_id_conditional!(@use);
 
                 $crate::_ulid_id_conditional!(@create_type $type);
+                $crate::_ulid_id_diesel!($type);
 
                 // NOTE: `macro_attr!` cannot resolve `macro_rules` derive macros inside
                 //       `_ulid_id_conditional`; e.g. `Serialize` works, `Newtype*` doesn't.
