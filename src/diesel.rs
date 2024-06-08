@@ -11,7 +11,7 @@ macro_rules! delegate_to_sql_nullable {
                 &'b self,
                 out: &mut diesel::serialize::Output<'b, '_, DB>,
             ) -> diesel::serialize::Result {
-                ToSql::<ST, DB>::to_sql(self, out)
+                diesel::serialize::ToSql::<ST, DB>::to_sql(self, out)
             }
         }
     };
@@ -20,15 +20,28 @@ macro_rules! delegate_to_sql_nullable {
 pub use delegate_to_sql_nullable;
 
 #[macro_export]
-macro_rules! impl_as_expression_queryable {
-    (@as_expression $ty: ty, $st: ty $(, ($st2: ident) => $rt: ty)? $(, ref $lt: lifetime)?) => {
-        impl<$($lt,)? $($st2)?> AsExpression<$st> for $(&$lt)? $ty $(
+macro_rules! derive_as_expression_queryable {
+    ($ty: ty as $st: ty) => {
+        const _: () = {
+            use diesel::expression::AsExpression;
+
+            #[derive(AsExpression, FromSqlRow)]
+            #[diesel(foreign_derive)]
+            #[diesel(sql_type = $st)]
+            struct TyProxy($ty);
+        };
+    };
+}
+
+#[macro_export]
+macro_rules! imitate_as_expression_queryable {
+    (@as_expression $ty: ty, $rt: ty $(, ref $lt: lifetime)?) => {
+        impl<$($lt,)? ST> AsExpression<ST> for $(&$lt)? $ty
         where
-            $st2: SingleValue,
-            $rt: AsExpression<$st>
-        )?
+            ST: SingleValue,
+            $rt: AsExpression<ST>
         {
-            type Expression = Bound<$st, Self>;
+            type Expression = Bound<ST, Self>;
 
             fn as_expression(self) -> Self::Expression {
                 Bound::new(self)
@@ -36,61 +49,44 @@ macro_rules! impl_as_expression_queryable {
         }
     };
 
-    (@as_expression $ty: ty, Nullable<$st: ty>, $rt: ty $(, ref $lt: lifetime)?) => {};
+    ($ty: ty as $rt: ty) => {
+        const _: () = {
+            use diesel::backend::Backend;
+            use diesel::deserialize::{self, FromSql, Queryable};
+            use diesel::internal::derives::as_expression::Bound;
+            use diesel::expression::AsExpression;
 
-    (@as_expression $ty: ty, $st: ty $(, $rt: ty)? $(, ref $lt: lifetime)?) => {
-        $crate::impl_as_expression_queryable! {@as_expression $ty, $st $(, (ST) => $rt)? $(, ref $lt)?}
-    };
+            #[allow(unused_imports)]
+            use diesel::sql_types::{Nullable, SingleValue};
 
-    (@impl $ty: ty, $st: ty $(, $st2: ty => $rt: ty)?) => {
-        ::paste::paste! {
-            #[allow(non_snake_case)]
-            mod [<impl_diesel_for_ $ty>] {
-                use super::*;
+            $crate::imitate_as_expression_queryable! {@as_expression $ty, $rt}
+            $crate::imitate_as_expression_queryable! {@as_expression $ty, $rt, ref 'a}
 
-                use diesel::backend::Backend;
-                use diesel::deserialize::{self, FromSql, Queryable};
-                use diesel::internal::derives::as_expression::Bound;
-                use diesel::expression::AsExpression;
+            $crate::delegate_to_sql_nullable! {$ty}
 
-                #[allow(unused_imports)]
-                use diesel::sql_types::{Nullable, SingleValue};
+            impl<ST, DB> Queryable<ST, DB> for $ty
+            where
+                DB: Backend,
+                ST: SingleValue,
+                $ty: FromSql<ST, DB>,
+            {
+                type Row = Self;
 
-                $crate::impl_as_expression_queryable! {@as_expression $ty, $st $(, $rt)?}
-                $crate::impl_as_expression_queryable! {@as_expression $ty, Nullable<$st> $(, $rt)?}
-                $crate::impl_as_expression_queryable! {@as_expression $ty, $st $(, $rt)?, ref 'a}
-                $crate::impl_as_expression_queryable! {@as_expression $ty, Nullable<$st> $(, $rt)?, ref 'a}
-
-                impl<$($st2,)? DB> Queryable<$st, DB> for $ty
-                where
-                    DB: Backend,
-                    $($st2: SingleValue,)?
-                    $ty: FromSql<$st, DB>,
-                {
-                    type Row = Self;
-
-                    fn build(row: Self::Row) -> deserialize::Result<Self> {
-                        Ok(row)
-                    }
+                fn build(row: Self::Row) -> deserialize::Result<Self> {
+                    Ok(row)
                 }
             }
-        }
-    };
-
-    (@impl $ty: ty, $st: ty $(, $rt: ty)?) => {
-        $crate::impl_as_expression_queryable! {@impl $ty, $st $(, $st => $rt)?}
-    };
-
-    ($st: ty [expresses] $ty: ty) => {
-        $crate::impl_as_expression_queryable! {@impl $ty, $st}
-    };
-
-    ($rt: ty [generalizes] $ty: ty) => {
-        $crate::impl_as_expression_queryable! {@impl $ty, ST, $rt}
+        };
     };
 }
 
-pub use impl_as_expression_queryable;
+pub use imitate_as_expression_queryable;
+
+#[derive(Debug)]
+#[allow(dead_code)]
+struct Poo(String);
+
+imitate_as_expression_queryable!(Poo as String);
 
 // TODO: This is new stuff
 
@@ -104,44 +100,40 @@ pub use impl_as_expression_queryable;
 macro_rules! impl_diesel_for_u16_in_terms_of_i32 {
     // TODO: Support... generics?
     ($ty: ty) => {
-        ::paste::paste! {
-            #[allow(non_snake_case)]
-            mod [<impl_diesel_for_ $ty>] {
-                use super::$ty;
+        const _: () = {
+            use diesel::backend::Backend;
+            use diesel::deserialize::{self, FromSql, FromSqlRow};
+            use diesel::query_builder::bind_collector::RawBytesBindCollector;
+            use diesel::serialize::{self, ToSql};
+            use diesel::sql_types::Int4;
 
-                use diesel::backend::Backend;
-                use diesel::deserialize::{self, FromSql};
-                use diesel::serialize::{self, ToSql};
-                use diesel::sql_types::Int4;
-                use diesel::query_builder::bind_collector::RawBytesBindCollector;
-
-                impl<DB> FromSql<Int4, DB> for $ty
-                where
-                    DB: Backend,
-                    i32: FromSql<Int4, DB>,
-                {
-                    fn from_sql(bytes: DB::RawValue<'_>) -> deserialize::Result<Self> {
-                        // TODO: Support alternate wrapping strategies
-                        i32::from_sql(bytes).map(|n| n as u16).map($ty::new)
-                    }
+            impl<DB> FromSql<Int4, DB> for $ty
+            where
+                DB: Backend,
+                i32: FromSql<Int4, DB>,
+            {
+                fn from_sql(bytes: DB::RawValue<'_>) -> deserialize::Result<Self> {
+                    // TODO: Support alternate wrapping strategies
+                    i32::from_sql(bytes).map(|n| n as u16).map(<$ty>::new)
                 }
-
-                impl<DB> ToSql<Int4, DB> for $ty
-                where
-                    DB: for<'a> Backend<BindCollector<'a> = RawBytesBindCollector<DB>>,
-                    i32: ToSql<Int4, DB>,
-                {
-                    fn to_sql<'b>(&'b self, out: &mut serialize::Output<'b, '_, DB>) -> serialize::Result {
-                        // TODO: Support alternate unwrapping strategies
-                        i32::from(self.0).to_sql(&mut out.reborrow())
-                    }
-                }
-
-                $crate::delegate_to_sql_nullable!($ty);
-
-                $crate::impl_as_expression_queryable! {Int4 [expresses] $ty}
             }
-        }
+
+            impl<DB> ToSql<Int4, DB> for $ty
+            where
+                DB: for<'a> Backend<BindCollector<'a> = RawBytesBindCollector<DB>>,
+                i32: ToSql<Int4, DB>,
+            {
+                fn to_sql<'b>(
+                    &'b self,
+                    out: &mut serialize::Output<'b, '_, DB>,
+                ) -> serialize::Result {
+                    // TODO: Support alternate unwrapping strategies
+                    i32::from(self.0).to_sql(&mut out.reborrow())
+                }
+            }
+
+            $crate::derive_as_expression_queryable!($ty as Int4);
+        };
     };
 }
 

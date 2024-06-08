@@ -109,8 +109,7 @@ where
     }
 }
 
-fn bijective_len<T: ToPrimitive>(k: u8, n: T) -> u8
-{
+fn bijective_len<T: ToPrimitive>(k: u8, n: T) -> u8 {
     let k = f64::from(k);
     let n = n.to_f64().unwrap();
     let power = (n + 1.) * (k - 1.);

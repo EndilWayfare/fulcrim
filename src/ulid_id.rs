@@ -110,7 +110,7 @@ cfg_if::cfg_if! {
                         use super::$ty;
 
                         use diesel::backend::Backend;
-                        use diesel::deserialize::{self, FromSql};
+                        use diesel::deserialize::{self, FromSql, FromSqlRow};
                         use diesel::serialize::{self, ToSql};
                         use diesel::sql_types;
                         use diesel::query_builder::bind_collector::RawBytesBindCollector;
@@ -137,9 +137,7 @@ cfg_if::cfg_if! {
                             }
                         }
 
-                        ::fulcrim::diesel::delegate_to_sql_nullable!($ty);
-
-                        ::fulcrim::diesel::impl_as_expression_queryable! {sql_types::Uuid [expresses] $ty}
+                        $crate::derive_as_expression_queryable!($ty as sql_types::Uuid);
                     }
                 }
             };
