@@ -140,6 +140,18 @@ impl UdfToken {
     pub fn default_cell<T: Default>(&self) -> UdfCell<T> {
         self.make_cell(Default::default())
     }
+
+    pub fn debug(&self) -> DebugToken {
+        DebugToken(self._private_clone())
+    }
+}
+
+pub struct DebugToken(UdfToken);
+
+impl Debug for DebugToken {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
 }
 
 #[derive(Debug)]
@@ -152,6 +164,10 @@ pub struct UdfCell<T> {
 impl<T> UdfCell<T> {
     pub fn new(value: T) -> Self {
         UdfToken::new().make_cell(value)
+    }
+
+    pub fn debug_token(&self) -> DebugToken {
+        self.token.debug()
     }
 }
 
@@ -290,10 +306,15 @@ impl<'a, T> Authorized<'a, T> {
 // NOTE: Dispatch of mutable `RefCell` behavior, augmented with token requirement
 impl<T> UdfCell<T> {
     fn authorize(&mut self, token: &UdfToken) -> Result<Authorized<'_, T>, BorrowMutError> {
-        if self.token == *token {
+        let actual = token;
+        let expected = &self.token;
+
+        if actual == expected {
             Ok(Authorized(self))
         } else {
-            Err(TokenError.into())
+            let actual = actual.debug();
+            let expected = expected.debug();
+            Err(TokenError { actual, expected }.into())
         }
     }
 
@@ -332,8 +353,11 @@ impl<T> UdfCell<T> {
 
 #[derive(Debug)]
 #[derive(Error)]
-#[error("Invalid token")]
-pub struct TokenError;
+#[error("Invalid token ({actual:?} != {expected:?}")]
+pub struct TokenError {
+    actual: DebugToken,
+    expected: DebugToken,
+}
 
 #[derive(Debug)]
 #[derive(Error)]
