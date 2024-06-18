@@ -136,6 +136,10 @@ impl UdfToken {
             token,
         }
     }
+
+    pub fn default_cell<T: Default>(&self) -> UdfCell<T> {
+        self.make_cell(Default::default())
+    }
 }
 
 #[derive(Debug)]
