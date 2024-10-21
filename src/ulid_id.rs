@@ -101,6 +101,8 @@ cfg_if::cfg_if! {
 
 cfg_if::cfg_if! {
     if #[cfg(feature = "diesel")] {
+        pub extern crate uuid;
+
         #[macro_export]
         macro_rules! impl_diesel_for_ulid_newtype {
             ($ty: ty) => {
@@ -109,13 +111,14 @@ cfg_if::cfg_if! {
                     mod [<impl_diesel_for_ $ty>] {
                         use super::$ty;
 
+                        use $crate::diesel::diesel;
                         use diesel::backend::Backend;
                         use diesel::deserialize::{self, FromSql, FromSqlRow};
                         use diesel::serialize::{self, ToSql};
                         use diesel::sql_types;
                         use diesel::query_builder::bind_collector::RawBytesBindCollector;
-                        use ulid::Ulid;
-                        use uuid::Uuid;
+                        use $crate::ulid_id::ulid::Ulid;
+                        use $crate::ulid_id::uuid::Uuid;
 
                         impl<DB> FromSql<sql_types::Uuid, DB> for $ty
                         where

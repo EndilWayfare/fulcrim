@@ -1,17 +1,19 @@
+pub extern crate diesel;
+
 #[macro_export]
 macro_rules! delegate_to_sql_nullable {
     ($ty: ty) => {
-        impl<ST, DB> diesel::serialize::ToSql<diesel::sql_types::Nullable<ST>, DB> for $ty
+        impl<ST, DB> $crate::diesel::diesel::serialize::ToSql<$crate::diesel::diesel::sql_types::Nullable<ST>, DB> for $ty
         where
-            DB: diesel::backend::Backend,
-            $ty: diesel::serialize::ToSql<ST, DB>,
+            DB: $crate::diesel::diesel::backend::Backend,
+            $ty: $crate::diesel::diesel::serialize::ToSql<ST, DB>,
             ST: 'static,
         {
             fn to_sql<'b>(
                 &'b self,
-                out: &mut diesel::serialize::Output<'b, '_, DB>,
-            ) -> diesel::serialize::Result {
-                diesel::serialize::ToSql::<ST, DB>::to_sql(self, out)
+                out: &mut $crate::diesel::diesel::serialize::Output<'b, '_, DB>,
+            ) -> $crate::diesel::diesel::serialize::Result {
+                $crate::diesel::diesel::serialize::ToSql::<ST, DB>::to_sql(self, out)
             }
         }
     };
@@ -51,6 +53,7 @@ macro_rules! imitate_as_expression_queryable {
 
     ($ty: ty as $rt: ty) => {
         const _: () = {
+            use $crate::diesel::diesel;
             use diesel::backend::Backend;
             use diesel::deserialize::{self, FromSql, Queryable};
             use diesel::internal::derives::as_expression::Bound;
@@ -101,6 +104,7 @@ macro_rules! impl_diesel_for_u16_in_terms_of_i32 {
     // TODO: Support... generics?
     ($ty: ty) => {
         const _: () = {
+            use $crate::diesel::diesel;
             use diesel::backend::Backend;
             use diesel::deserialize::{self, FromSql, FromSqlRow};
             use diesel::query_builder::bind_collector::RawBytesBindCollector;
