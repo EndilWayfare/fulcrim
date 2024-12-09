@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 use std::hash::Hash;
+use std::ops::Deref;
 
 #[macro_use]
 #[cfg(feature = "diesel")]
@@ -21,10 +22,22 @@ pub mod unsigned;
 
 pub mod update;
 
-pub trait Entity: Clone {
+pub trait Entity {
     type Id: Copy + Eq + Hash;
 
     fn id(&self) -> Self::Id;
+}
+
+impl<E, F> Entity for F
+where
+    E: Entity,
+    F: Deref<Target = E>,
+{
+    type Id = E::Id;
+
+    fn id(&self) -> Self::Id {
+        self.deref().id()
+    }
 }
 
 pub type EntityBTreeMap<T> = BTreeMap<<T as Entity>::Id, T>;
