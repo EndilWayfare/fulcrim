@@ -6,6 +6,9 @@ use std::ops::Deref;
 #[cfg(feature = "diesel")]
 pub mod diesel;
 
+#[cfg(feature = "itertools")]
+pub mod itertools;
+
 #[macro_use]
 #[cfg(feature = "parsing")]
 pub mod parsing;
@@ -21,6 +24,13 @@ pub mod ulid_id;
 pub mod unsigned;
 
 pub mod update;
+
+pub mod prelude {
+    pub use super::{Entity, EntityBTreeMap, EntityHashMap};
+
+    #[cfg(feature = "itertools")]
+    pub use crate::itertools::prelude::*;
+}
 
 pub trait Entity {
     type Id: Copy + Eq + Hash;

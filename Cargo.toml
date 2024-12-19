@@ -3,7 +3,7 @@ name = "fulcrim"
 version = "0.2.1"
 authors = ["Philip Ormand <pro@ruda.com>"]
 edition = "2021"
-repository = "http://rigel.ruda.com:8060/Phil/ruda-taxonomy/"
+repository = "http://rigel.ruda.com:8060/Phil/fulcrim/"
 description = "Foundational, minimally intrusive types and traits for domain modeling"
 
 [package.metadata.cargo-all-features]
@@ -52,6 +52,7 @@ diesel = [
 
     "ulid?/uuid",
 ]
+itertools = ["dep:itertools"]
 parsing = ["dep:nom", "dep:nom-supreme", "dep:paste"]
 serde = ["dep:serde", "ulid?/serde"]
 udf-cell = ["dep:thiserror"]
@@ -79,3 +80,4 @@ unsigned = [
 [dev-dependencies]
 impls = "1.0"
 serde_test = "1.0.127"
+thiserror = "1.0"

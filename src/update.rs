@@ -71,7 +71,7 @@ pub trait NeqAssign<NEW> {
     ///
     /// # Example
     /// ```
-    /// # use fulcrim::NeqAssign;
+    /// # use fulcrim::update::NeqAssign;
     /// let mut foo = 1;
     ///
     /// assert_eq!(foo.neq_assign(42), true);
@@ -95,7 +95,7 @@ impl<T: BorrowMut<U>, U: PartialEq> NeqAssign<U> for T {
 /// Useful for `Result<T, E: !PartialEq>`.
 pub trait NeqAssignBy<NEW> {
     /// ```
-    /// # use yewtil::{NeqAssign, NeqAssignBy};
+    /// # use fulcrim::update::{NeqAssign, NeqAssignBy};
     /// ##[derive(Clone, Debug)]
     /// struct NonComparableError;
     ///
