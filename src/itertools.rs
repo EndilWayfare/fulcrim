@@ -1,30 +1,65 @@
 use core::marker::PhantomData;
 
+// TODO: Do we even need `itertools`?
 pub use itertools;
 
 pub mod prelude {
+    // TODO: Do we REALLY want to do this?
     pub use itertools::Itertools;
 
-    pub use super::FulcrimItertools;
+    pub use super::{IteratorExt, TryIteratorExt};
 }
 
-pub trait FulcrimItertools: Iterator {
+pub trait IteratorExt: Iterator {
+    /// Fallibly convert each item of the iterator using the [`FromInto`] trait.
+    ///
+    /// Included for completeness. I don't see this being nearly as useful as the clunkier-named
+    /// ["and then try into"](`map_and_then_try_into`) variant.
+    fn map_try_into<T, U>(self) -> MapTryInto<Self, T, U>
+    where
+        Self: Sized + Iterator<Item = T>,
+        T: TryInto<U>,
+    {
+        map_try_into(self)
+    }
+}
+
+impl<T> IteratorExt for T where T: Iterator {}
+
+/// An `Iterator<Item = Result<Ok, Error>>`.
+///
+/// Following precedent from `TryFuture`
+pub trait TryIterator: Iterator<Item = Result<Self::Ok, Self::Error>> {
+    type Ok;
+    type Error;
+}
+
+impl<I, T, E> TryIterator for I
+where
+    I: Iterator<Item = Result<T, E>>,
+{
+    type Ok = T;
+
+    type Error = E;
+}
+
+pub trait TryIteratorExt: TryIterator {
     /// Convert each `Result::Ok` item of the iterator using the [`Into`] trait. `Result::Err`
     /// values are unchanged.
     ///
     /// Equivalent to `map_ok(Into::into)`, following the precedent of `map_into`.
     ///
     /// ```
-    /// use fulcrim::itertools::FulcrimItertools;
+    /// use fulcrim::itertools::TryIteratorExt;
     ///
     /// let input = vec![Ok(42i32), Err(false), Ok(12)];
     /// let it = input.into_iter().map_ok_into();
     /// itertools::assert_equal(it, vec![Ok(42f64), Err(false), Ok(12.)]);
     /// ```
-    fn map_ok_into<T, U, E>(self) -> MapOkInto<Self, U>
+    fn map_ok_into<U>(self) -> MapOkInto<Self, U>
     where
-        Self: Sized + Iterator<Item = Result<T, E>>,
-        T: Into<U>,
+        Self: Sized,
+        Self::Ok: Into<U>,
     {
         map_ok_into(self)
     }
@@ -34,7 +69,7 @@ pub trait FulcrimItertools: Iterator {
     ///
     /// Useful for app/library error types that are composed from multiple sub-error types, for
     /// each of which it impls [`From`]. The `?` operator doesn't work "through" the iterator
-    /// boundary.
+    /// boundary, and `collect::<Result<_, _>>()?` only keeps the first error.
     ///
     /// Follows `map_into` precedent in the orthogonal direction.
     ///
@@ -43,7 +78,7 @@ pub trait FulcrimItertools: Iterator {
     ///
     /// use std::io;
     ///
-    /// use fulcrim::itertools::FulcrimItertools;
+    /// use fulcrim::itertools::TryIteratorExt;
     /// use thiserror::Error;
     ///
     /// pub fn process_cringe<'i>(input: impl Iterator<Item = &'i str>) -> Vec<Result<u32, AppError>> {
@@ -63,10 +98,10 @@ pub trait FulcrimItertools: Iterator {
     ///     ParseInt(#[from] ParseIntError),
     /// }
     /// ```
-    fn map_err_into<T, E, E2>(self) -> MapErrInto<Self, E2>
+    fn map_err_into<E>(self) -> MapErrInto<Self, E>
     where
-        Self: Sized + Iterator<Item = Result<T, E>>,
-        E: Into<E2>,
+        Self: Sized,
+        Self::Error: Into<E>,
     {
         map_err_into(self)
     }
@@ -77,48 +112,39 @@ pub trait FulcrimItertools: Iterator {
     /// instead of just `U`, output iterator is of `Result<U, E>`
     ///
     /// Has a BUILT-IN, IMPLICIT `map_err_into` (because it's needed in MOST situations where this
-    /// is useful), so the output `Result` can have a different error type as long as the input
-    /// error type can be converted to it with [`From`].
+    /// is useful), so the output `Result` OF THE MAPPING FUNCTION can have a different error type
+    /// `E2` as long as it can be converted back to the `Self` error type `E`; i.e. `E: From<E2>`.
     ///
-    /// TODO: Hopefully there aren't too many cases where inference fails for `E2`...
-    fn map_and_then<F, T, U, E, E2>(self, f: F) -> MapAndThen<Self, F>
+    /// The ergonomics of this type conversion aren't *perfect*, the REUSABLE COMPOSIBILITY story
+    /// seems less awkward when the "named function" in the "instead of a redundant closure" case
+    /// DOESN'T REQUIRE KNOWLEDGE of the "concrete" callsite error type. The mapping function is
+    /// "covariant (under `From`) in output" ...I think?
+    ///
+    fn map_and_then<F, U, E>(self, f: F) -> MapAndThen<Self, F>
     where
-        Self: Sized + Iterator<Item = Result<T, E>>,
-        E: Into<E2>,
-        F: FnMut(T) -> Result<U, E2>,
+        Self: Sized,
+        E: Into<Self::Error>,
+        F: FnMut(Self::Ok) -> Result<U, E>,
     {
         map_and_then(self, f)
-    }
-
-    /// Fallibly convert each item of the iterator using the [`FromInto`] trait.
-    ///
-    /// Included for completeness. I don't see this being nearly as useful as the clunkier-named
-    /// ["and then try into"](`map_and_then_try_into`) variant.
-    fn map_try_into<T, U>(self) -> MapTryInto<Self, T, U>
-    where
-        Self: Sized + Iterator<Item = T>,
-        T: TryInto<U>,
-    {
-        map_try_into(self)
     }
 
     /// Fallibly convert each `Result::Err` item of the iterator using the [`Into`] trait.
     /// `Result::Ok` values are unchanged.
     ///
-    /// Is to `map_and_then` as `map_ok_into` is to `map_ok`.
+    /// Is to `map_and_then` as `map_ok_into` is to `map_ok`. This includes `map_and_then`'s
+    /// inner-error-type-`Into`-conversion rule.
     ///
-    /// TODO: This is where I KNOW that inference frequently fails for `E2`...
-    fn map_and_then_try_into<T, U, E, E2>(self) -> MapAndThenTryInto<Self, T, U, E, E2>
+    fn map_and_then_try_into<U>(self) -> MapAndThenTryInto<Self, Self::Ok, U, Self::Error>
     where
-        Self: Sized + Iterator<Item = Result<T, E>>,
-        T: TryInto<U>,
-        E2: From<E> + From<T::Error>,
+        Self: Sized,
+        Self::Ok: TryInto<U, Error: Into<Self::Error>>,
     {
         map_and_then_try_into(self)
     }
 }
 
-impl<T> FulcrimItertools for T where T: Iterator {}
+impl<I> TryIteratorExt for I where I: TryIterator {}
 
 pub type MapOkInto<I, U> = MapSpecialCase<I, MapSpecialCaseFnOkInto<U>>;
 
@@ -180,20 +206,20 @@ pub struct MapSpecialCaseFnAndThen<F>(F);
 
 impl<F, T, U, E, E2> MapSpecialCaseFn<Result<T, E>> for MapSpecialCaseFnAndThen<F>
 where
-    E: Into<E2>,
+    E2: Into<E>,
     F: FnMut(T) -> Result<U, E2>,
 {
-    type Out = Result<U, E2>;
+    type Out = Result<U, E>;
 
     fn call(&mut self, t: Result<T, E>) -> Self::Out {
-        t.map_err(Into::into).and_then(|v| self.0(v))
+        t.and_then(|v| self.0(v).map_err(Into::into))
     }
 }
 
 pub fn map_and_then<I, F, T, U, E, E2>(iter: I, f: F) -> MapAndThen<I, F>
 where
     I: Iterator<Item = Result<T, E>>,
-    E: Into<E2>,
+    E2: Into<E>,
     F: FnMut(T) -> Result<U, E2>,
 {
     MapSpecialCase {
@@ -229,29 +255,28 @@ where
     }
 }
 
-pub type MapAndThenTryInto<I, T, U, E, E2> =
-    MapSpecialCase<I, MapSpecialCaseFnAndThenTryInto<T, U, E, E2>>;
+pub type MapAndThenTryInto<I, T, U, E> = MapSpecialCase<I, MapSpecialCaseFnAndThenTryInto<T, U, E>>;
 
 #[derive(Clone, Debug)]
-pub struct MapSpecialCaseFnAndThenTryInto<T, U, E, E2>(PhantomData<(T, U, E, E2)>);
+pub struct MapSpecialCaseFnAndThenTryInto<T, U, E>(PhantomData<(T, U, E)>);
 
-impl<T, U, E, E2> MapSpecialCaseFn<Result<T, E>> for MapSpecialCaseFnAndThenTryInto<T, U, E, E2>
+impl<T, U, E> MapSpecialCaseFn<Result<T, E>> for MapSpecialCaseFnAndThenTryInto<T, U, E>
 where
     T: TryInto<U>,
-    E2: From<E> + From<T::Error>,
+    T::Error: Into<E>,
 {
-    type Out = Result<U, E2>;
+    type Out = Result<U, E>;
 
     fn call(&mut self, t: Result<T, E>) -> Self::Out {
-        t.map_err(Into::into).and_then(|v| Ok(v.try_into()?))
+        MapSpecialCaseFnAndThen(TryInto::try_into).call(t)
     }
 }
 
-pub fn map_and_then_try_into<I, T, U, E, E2>(iter: I) -> MapAndThenTryInto<I, T, U, E, E2>
+pub fn map_and_then_try_into<I, T, U, E>(iter: I) -> MapAndThenTryInto<I, T, U, E>
 where
     I: Iterator<Item = Result<T, E>>,
     T: TryInto<U>,
-    E2: From<E> + From<T::Error>,
+    T::Error: Into<E>,
 {
     MapSpecialCase {
         iter,
