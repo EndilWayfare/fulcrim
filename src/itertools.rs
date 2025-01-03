@@ -64,6 +64,50 @@ pub trait TryIteratorExt: TryIterator {
         map_ok_into(self)
     }
 
+    /// Convert each `Result::Err` item of the iterator using the provided mapping function.
+    /// `Result::Ok` values are unchanged.
+    ///
+    /// Like [`map_err_into`], useful for app/library error types, but when one variant is GENERIC.
+    /// It can impl [`From`] for ONLY the generic variant without violating coherence. So, you need
+    /// a way to map to the concrete variants EXPLICITLY.
+    ///
+    /// Follows `map_ok` precedent in the orthogonal direction.
+    ///
+    /// ```
+    /// use core::num::ParseIntError;
+    ///
+    /// use std::io;
+    ///
+    /// use fulcrim::itertools::TryIteratorExt;
+    /// use thiserror::Error;
+    ///
+    /// pub fn process_cringe<'i>(input: impl Iterator<Item = &'i str>) -> Vec<Result<u32, AppError>> {
+    ///     input.map(|s| s.parse().map_err(AppError::ParseInt)).collect()
+    /// }
+    ///
+    /// pub fn process<'i>(input: impl Iterator<Item = &'i str>) -> Vec<Result< u32, AppError>> {
+    ///     input.map(str::parse).map_err(AppError::ParseInt).collect()
+    /// }
+    ///
+    /// #[derive(Debug)]
+    /// #[derive(Error)]
+    /// pub enum GeneralError<E> {
+    ///     #[error("{0}")]
+    ///     ParseInt(#[source] ParseIntError),
+    ///     #[error(transparent)]
+    ///     Other(#[from] E),
+    /// }
+    ///
+    /// pub type AppError = GeneralError<io::Error>;
+    /// ```
+    fn map_err<F, E>(self, f: F) -> MapErr<Self, F>
+    where
+        Self: Sized,
+        F: FnMut(Self::Error) -> E,
+    {
+        map_err(self, f)
+    }
+
     /// Convert each `Result::Err` item of the iterator using the [`Into`] trait. `Result::Ok`
     /// values are unchanged.
     ///
@@ -170,6 +214,32 @@ where
     MapSpecialCase {
         iter,
         f: MapSpecialCaseFnOkInto(PhantomData),
+    }
+}
+
+pub type MapErr<I, F> = MapSpecialCase<I, MapSpecialCaseFnErr<F>>;
+
+pub struct MapSpecialCaseFnErr<F>(F);
+
+impl<F, T, E, E2> MapSpecialCaseFn<Result<T, E>> for MapSpecialCaseFnErr<F>
+where
+    F: FnMut(E) -> E2,
+{
+    type Out = Result<T, E2>;
+
+    fn call(&mut self, t: Result<T, E>) -> Self::Out {
+        t.map_err(&mut self.0)
+    }
+}
+
+pub fn map_err<I, F, T, E, E2>(iter: I, f: F) -> MapErr<I, F>
+where
+    I: Iterator<Item = Result<T, E>>,
+    F: FnMut(E) -> E2,
+{
+    MapSpecialCase {
+        iter,
+        f: MapSpecialCaseFnErr(f),
     }
 }
 
