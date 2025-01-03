@@ -10,6 +10,29 @@ pub mod prelude {
     pub use super::{IteratorExt, TryIteratorExt};
 }
 
+/// Sometimes, you JUST NEED TO BE ABLE TO NAME `F` in type parameters.
+///
+/// RPIT is *hard*
+///
+/// TODO: This will probably have more general applications
+///
+/// TODO: I would have thought sure that SOME general crate exists for this, but either it doesn't
+/// or I haven't thought of the right keywords to search.
+///
+pub trait UnaryMut<T> {
+    type Output;
+
+    fn call_mut(&mut self, value: T) -> Self::Output;
+}
+
+impl<T, U> UnaryMut<T> for T where T: Fn(T) -> U {
+    type Output = U;
+
+    fn call_mut(&mut self, value: T) -> Self::Output {
+        self(value)
+    }
+}
+
 pub trait IteratorExt: Iterator {
     /// Fallibly convert each item of the iterator using the [`FromInto`] trait.
     ///
@@ -106,6 +129,19 @@ pub trait TryIteratorExt: TryIterator {
         F: FnMut(Self::Error) -> E,
     {
         map_err(self, f)
+    }
+
+    /// Convert each `Result::Err` item of the iterator using the provided `UnaryMut`.
+    /// `Result::Ok` values are unchanged.
+    ///
+    /// Like [`map_err`], but the type of the returned iterator is namable.
+    ///
+    fn map_err_named<F, E>(self, f: F) -> MapErrNamed<Self, F>
+    where
+        Self: Sized,
+        F: UnaryMut<Self::Error, Output = E>,
+    {
+        map_err_named(self, f)
     }
 
     /// Convert each `Result::Err` item of the iterator using the [`Into`] trait. `Result::Ok`
@@ -240,6 +276,32 @@ where
     MapSpecialCase {
         iter,
         f: MapSpecialCaseFnErr(f),
+    }
+}
+
+pub type MapErrNamed<I, F> = MapSpecialCase<I, MapSpecialCaseFnErrNamed<F>>;
+
+pub struct MapSpecialCaseFnErrNamed<F>(F);
+
+impl<F, T, E, E2> MapSpecialCaseFn<Result<T, E>> for MapSpecialCaseFnErrNamed<F>
+where
+    F: UnaryMut<E, Output = E2>,
+{
+    type Out = Result<T, E2>;
+
+    fn call(&mut self, t: Result<T, E>) -> Self::Out {
+        t.map_err(|e| self.0.call_mut(e))
+    }
+}
+
+pub fn map_err_named<I, F, T, E, E2>(iter: I, f: F) -> MapErrNamed<I, F>
+where
+    I: Iterator<Item = Result<T, E>>,
+    F: UnaryMut<E, Output = E2>,
+{
+    MapSpecialCase {
+        iter,
+        f: MapSpecialCaseFnErrNamed(f),
     }
 }
 
