@@ -38,17 +38,17 @@ where
 macro_rules! CharParseFromStr {
     (@args ($(where $($bound:tt)*)?) $vis:vis $name:ident $($token:tt)+) => {
         paste::paste! {
-            CharParseFromStr! {@impl [$name] [[<Parse $name Error>]] [$($($bound)*)?] $($token)+}
+            $crate::CharParseFromStr! {@impl [$name] [[<Parse $name Error>]] [$($($bound)*)?] $($token)+}
         }
     };
     (@args (err($err:ty) $(where $($bound:tt)*)?) $vis:vis $name:ident $($token:tt)+) => {
         paste::paste! {
-            CharParseFromStr! {@impl [$name] [$err] [$($($bound)*)?] $($token)+}
+            $crate::CharParseFromStr! {@impl [$name] [$err] [$($($bound)*)?] $($token)+}
         }
     };
     (@impl [$name:ident] [$err:ident] [$($bound:tt)*] $($token:tt)+) => {
         ::newtype_derive_2018::generics_parse! {
-            CharParseFromStr {
+            $crate::CharParseFromStr {
                 @impl generics_parse_done
                 [$name] [$err] [$($bound)*]
             }
@@ -63,12 +63,12 @@ macro_rules! CharParseFromStr {
         $($token:tt)*
     ) => {
         ::newtype_derive_2018::generics_concat! {
-            CharParseFromStr {
+            $crate::CharParseFromStr {
                 @impl generics_concat_done
                 [$name] [$err]
             }
             [$($g)*] [$($r)*] [$($w)*],
-            [] [] [where Self: for<'a> CharParse<&'a str, $err>]
+            [] [] [where Self: for<'a> $crate::parsing::CharParse<&'a str, $err>]
         }
     };
     (
@@ -76,17 +76,17 @@ macro_rules! CharParseFromStr {
         [$name:ident] [$err:ty]
         [$($g:tt)*] [$($r:tt)*] [$($w:tt)*]
     ) => {
-        impl $($g)* FromStr for $name $($r)* $($w)* {
+        impl $($g)* ::core::str::FromStr for $name $($r)* $($w)* {
             type Err = $err;
 
             fn from_str(s: &str) -> Result<Self, Self::Err> {
-                <Self as CharParse::<_, _>>::from_str_impl(s)
+                <Self as $crate::parsing::CharParse::<_, _>>::from_str_impl(s)
             }
         }
     };
 
     (($($err:tt)*) $vis:vis $type_kind:ident $name:ident $($body:tt)+) => {
-        CharParseFromStr! {@args ($($err)*) $vis $name $($body)+}
+        $crate::CharParseFromStr! {@args ($($err)*) $vis $name $($body)+}
     };
 }
 
@@ -95,11 +95,11 @@ pub use CharParseFromStr;
 #[macro_export]
 macro_rules! naive_parse_error {
     (@impl $name:ty, $msg:literal) => {
-        naive_parse_error! {
+        $crate::naive_parse_error! {
             @impl $name
-            [paste::paste! {
+            [::paste::paste! {
                 #[derive(Debug, PartialEq)]
-                #[derive(Error)]
+                #[derive(::thiserror::Error)]
                 pub enum [<Parse $name Error>] {
                     #[error($msg)]
                     Invalid,
@@ -111,7 +111,7 @@ macro_rules! naive_parse_error {
         $($out)*
 
         ::paste::paste!{
-            impl<I> ParseError<I> for [<Parse $name Error>] {
+            impl<I> ::nom::error::ParseError<I> for [<Parse $name Error>] {
                 fn from_error_kind(_input: I, _kind: nom::error::ErrorKind) -> Self {
                     Self::Invalid
                 }
@@ -121,15 +121,15 @@ macro_rules! naive_parse_error {
                 }
             }
 
-            impl<I, E> FromExternalError<I, E> for [<Parse $name Error>] {
+            impl<I, E> ::nom::error::FromExternalError<I, E> for [<Parse $name Error>] {
                 fn from_external_error(_input: I, _kind: nom::error::ErrorKind, _e: E) -> Self {
                     Self::Invalid
                 }
             }
         }
     };
-    ($name:ty, $msg:literal) => { naive_parse_error!(@impl $name, $msg); };
-    ($name:ty) => { naive_parse_error! (@impl $name []); };
+    ($name:ty, $msg:literal) => { $crate::naive_parse_error!(@impl $name, $msg); };
+    ($name:ty) => { $crate::naive_parse_error! (@impl $name []); };
 }
 
 pub use naive_parse_error;
