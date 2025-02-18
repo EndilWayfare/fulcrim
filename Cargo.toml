@@ -1,6 +1,6 @@
 [package]
 name = "fulcrim"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["Philip Ormand <pro@ruda.com>"]
 edition = "2021"
 repository = "http://rigel.ruda.com:8060/Phil/fulcrim/"
