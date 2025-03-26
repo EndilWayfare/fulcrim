@@ -40,6 +40,8 @@ where
     {
         type Error = ParseBijectiveK26Error;
 
+        // TODO: This WILL blow up if you point it at "regular text thats not actually supposed to
+        //       be a number". So, you'll want to `Err` out on overflow instead of `panic`ing
         let factors = itertools::iterate(T::one(), |i| i.clone() * T::from(26));
         iter.into_iter()
             .rev()

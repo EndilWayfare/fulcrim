@@ -210,3 +210,57 @@ macro_rules! impl_diesel_for_enum {
 }
 
 pub use impl_diesel_for_enum;
+
+#[macro_export]
+macro_rules! impl_diesel_display_from_str {
+    ($ty: ty) => {
+        const _: () = {
+            use std::io::Write;
+
+            use diesel::backend::Backend;
+            use diesel::deserialize::{self, FromSql, FromSqlRow};
+            use diesel::query_builder::bind_collector::RawBytesBindCollector;
+            use diesel::serialize::{self, IsNull, ToSql};
+            use diesel::sql_types::Text;
+            use $crate::diesel::diesel;
+
+            impl<ST, DB> FromSql<ST, DB> for $ty
+            where
+                DB: Backend,
+                *const str: FromSql<ST, DB>,
+            {
+                // SAFETY: Literally copypasta'd from `impl FromSql for String`
+                // TODO: It would be massively convenient if there were a blessed way to "borrow a
+                //       `str` with the lifetime of `bytes`". I don't need an OWNED string, I just
+                //       need to LOOK at it.
+
+                #[allow(unsafe_code)] // ptr dereferencing
+                fn from_sql(bytes: DB::RawValue<'_>) -> deserialize::Result<Self> {
+                    let str_ptr = <*const str as FromSql<ST, DB>>::from_sql(bytes)?;
+                    // We know that the pointer impl will never return null
+                    let string = unsafe { &*str_ptr };
+
+                    Ok(string.parse()?)
+                }
+            }
+
+            impl<DB> ToSql<Text, DB> for $ty
+            where
+                DB: for<'a> Backend<BindCollector<'a> = RawBytesBindCollector<DB>>,
+            {
+                fn to_sql<'b>(
+                    &'b self,
+                    out: &mut serialize::Output<'b, '_, DB>,
+                ) -> serialize::Result {
+                    write!(out, "{}", self)
+                        .and(Ok(IsNull::No))
+                        .map_err(Into::into)
+                }
+            }
+
+            $crate::derive_as_expression_queryable!($ty as Text);
+        };
+    };
+}
+
+pub use crate::impl_diesel_display_from_str;
