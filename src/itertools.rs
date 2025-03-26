@@ -25,7 +25,10 @@ pub trait UnaryMut<T> {
     fn call_mut(&mut self, value: T) -> Self::Output;
 }
 
-impl<T, U> UnaryMut<T> for T where T: Fn(T) -> U {
+impl<T, U> UnaryMut<T> for T
+where
+    T: Fn(T) -> U,
+{
     type Output = U;
 
     fn call_mut(&mut self, value: T) -> Self::Output {

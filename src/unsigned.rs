@@ -161,7 +161,7 @@ mod _impl_diesel_for_bijective_k26_u16 {
 
     // TODO: Generics in macros are *bloody annoying*
     type BijectiveK26U16 = BijectiveK26<u16>;
-    crate::diesel::impl_diesel_for_u16_in_terms_of_i32!(BijectiveK26U16);
+    crate::diesel::impl_diesel_for_u16_in_terms_of_i32!(BijectiveK26U16: newtype);
 }
 
 macro_attr! {
@@ -224,7 +224,7 @@ mod _impl_diesel_for_ordinal_u16 {
 
     // TODO: Generics in macros are *bloody annoying*
     type OrdinalU16 = Ordinal<u16>;
-    crate::diesel::impl_diesel_for_u16_in_terms_of_i32!(OrdinalU16);
+    crate::diesel::impl_diesel_for_u16_in_terms_of_i32!(OrdinalU16: newtype);
 }
 
 pub trait HasGreaterWidth: Integer {
