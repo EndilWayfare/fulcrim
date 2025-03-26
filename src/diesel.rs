@@ -153,3 +153,60 @@ macro_rules! impl_diesel_for_u16_in_terms_of_i32 {
 }
 
 pub use impl_diesel_for_u16_in_terms_of_i32;
+
+// TODO: Also copypasta'd from `ruda-quote-service`
+#[macro_export]
+macro_rules! impl_diesel_for_enum {
+    (
+        $ty: ty => $st: ty {
+            $($variant: ident => $repr: expr),* $(,)?
+        }
+    ) => {
+        paste::paste! {
+            #[allow(non_snake_case)]
+            mod [<impl_diesel_for_ $ty>] {
+                use super::*;
+
+                use std::error::Error;
+                use std::io::Write;
+
+                use diesel::backend::Backend;
+                use diesel::deserialize::{self, FromSql, FromSqlRow};
+                use diesel::expression::AsExpression;
+                use diesel::pg::Pg;
+                use diesel::serialize::{self, IsNull, Output, ToSql};
+
+                impl FromSql<$st, Pg> for $ty
+                {
+                    fn from_sql(bytes: <Pg as Backend>::RawValue<'_>) -> deserialize::Result<Self> {
+                        match bytes.as_bytes() {
+                            $($repr => Ok(Self::$variant),)*
+                            bytes => {
+                                Err(format!(concat!("Invalid ", stringify!($ty), " {:?}"), String::from_utf8_lossy(bytes)).into())
+                            }
+                        }
+                    }
+                }
+
+                impl ToSql<$st, Pg> for $ty
+                {
+                    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
+                        out.write_all(match self {
+                            $(Self::$variant => $repr,)*
+                        })
+                        .map(|_| IsNull::No)
+                        .map_err(|e| Box::new(e) as Box<dyn Error + Send + Sync>)
+                    }
+                }
+
+                #[derive(AsExpression, FromSqlRow)]
+                #[diesel(foreign_derive)]
+                #[diesel(sql_type = $st)]
+                #[allow(dead_code)]
+                struct TyProxy($ty);
+            }
+        }
+    };
+}
+
+pub use impl_diesel_for_enum;
