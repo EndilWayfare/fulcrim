@@ -26,7 +26,7 @@ cfg-if = "1.0"
 #               bloat, especially if caused by another dependency you have no control over.
 #               Is this reasonable? Is this why people hate large dependency graphs? Would this
 #               actually be moving the needle for "dependency minimalism enthusiasts" at all?
-diesel = { optional = true, version = "2.1" }
+diesel = { optional = true, version = "2.2" }
 itertools = { optional = true, version = "0.13.0" }
 macro-attr-2018 = { optional = true, version = "3.0" }
 newtype-derive-2018 = { optional = true, version = "0.2.1" }
@@ -36,7 +36,7 @@ num-integer = { optional = true, version = "0.1.36" }
 num-traits = { optional = true, version = "0.2.0" }
 paste = { optional = true, version = "1.0" }
 serde = { optional = true, version = "1.0", features = ["derive"] }
-thiserror = { optional = true, version = "1.0" }
+thiserror = { optional = true, version = "2.0" }
 ulid = { optional = true, version = "1.0" }
 uuid = { optional = true, version = "1.0", default-features = false }
 web-time = { optional = true, version = "1.0" }
@@ -80,4 +80,4 @@ unsigned = [
 [dev-dependencies]
 impls = "1.0"
 serde_test = "1.0.127"
-thiserror = "1.0"
+thiserror = "2.0"
